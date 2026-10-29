@@ -10,7 +10,6 @@ const submitButton = document.getElementById("submit-btn");
 
 let notes = [];
 
-// Reusable function for making API requests.
 async function request(url, options = {}) {
     const response = await fetch(url, options);
 
@@ -19,10 +18,7 @@ async function request(url, options = {}) {
     }
 
     if (response.status === 204) {
-        return {
-            data: null,
-            status: response.status
-        };
+        return { data: null, status: response.status };
     }
 
     const data = await response.json();
@@ -33,13 +29,11 @@ async function request(url, options = {}) {
     };
 }
 
-// Display status messages.
 function showStatus(message, type = "") {
     statusMessage.textContent = message;
     statusMessage.className = type;
 }
 
-// Display notes safely on the page.
 function renderNotes() {
     notesList.replaceChildren();
 
@@ -61,12 +55,20 @@ function renderNotes() {
         const body = document.createElement("p");
         body.textContent = note.body || "No additional details.";
 
-        item.append(title, body);
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.textContent = "Delete";
+        deleteButton.className = "delete-btn";
+
+        deleteButton.addEventListener("click", () => {
+            deleteNote(note.id, deleteButton);
+        });
+
+        item.append(title, body, deleteButton);
         notesList.appendChild(item);
     });
 }
 
-// GET: Load the first 10 notes.
 async function loadNotes() {
     loadButton.disabled = true;
     showStatus("Loading notes...");
@@ -94,7 +96,6 @@ async function loadNotes() {
     }
 }
 
-// POST: Create a note.
 async function createNote(event) {
     event.preventDefault();
 
@@ -135,28 +136,49 @@ async function createNote(event) {
             })
         });
 
-        const newNote = result.data;
-
-        // JSONPlaceholder simulates creation but does not permanently save posts.
-        notes.unshift(newNote);
+        notes.unshift(result.data);
         renderNotes();
 
         noteForm.reset();
+
         showStatus("Note created successfully (practice API).", "success");
     } catch (error) {
-        showStatus(
-            "Sorry, we couldn't create the note. Please try again.",
-            "error"
-        );
-
+        showStatus("Sorry, we could not create the note. Please try again.", "error");
         console.error("Error creating note:", error);
     } finally {
         submitButton.disabled = false;
     }
 }
 
+async function deleteNote(noteId, deleteButton) {
+    const confirmed = window.confirm("Are you sure you want to delete this note?");
+
+    if (!confirmed) {
+        return;
+    }
+
+    deleteButton.disabled = true;
+    showStatus("Deleting note...");
+
+    try {
+        await request(`${API_URL}/${noteId}`, {
+            method: "DELETE"
+        });
+
+        notes = notes.filter((note) => note.id !== noteId);
+
+        renderNotes();
+
+        showStatus("Note deleted successfully (practice API).", "success");
+    } catch (error) {
+        showStatus("Sorry, we could not delete the note. Please try again.", "error");
+        console.error("Error deleting note:", error);
+
+        deleteButton.disabled = false;
+    }
+}
+
 loadButton.addEventListener("click", loadNotes);
 noteForm.addEventListener("submit", createNote);
 
-// Display the initial empty state.
 renderNotes();
