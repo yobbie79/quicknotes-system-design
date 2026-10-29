@@ -3,9 +3,14 @@ const API_URL = "https://jsonplaceholder.typicode.com/posts";
 const loadButton = document.getElementById("load-btn");
 const statusMessage = document.getElementById("status");
 const notesList = document.getElementById("notes-list");
+const noteForm = document.getElementById("note-form");
+const titleInput = document.getElementById("title-input");
+const bodyInput = document.getElementById("body-input");
+const submitButton = document.getElementById("submit-btn");
 
 let notes = [];
 
+// Reusable function for making API requests.
 async function request(url, options = {}) {
     const response = await fetch(url, options);
 
@@ -14,7 +19,10 @@ async function request(url, options = {}) {
     }
 
     if (response.status === 204) {
-        return { data: null, status: response.status };
+        return {
+            data: null,
+            status: response.status
+        };
     }
 
     const data = await response.json();
@@ -25,11 +33,13 @@ async function request(url, options = {}) {
     };
 }
 
+// Display status messages.
 function showStatus(message, type = "") {
     statusMessage.textContent = message;
     statusMessage.className = type;
 }
 
+// Display notes safely on the page.
 function renderNotes() {
     notesList.replaceChildren();
 
@@ -56,6 +66,7 @@ function renderNotes() {
     });
 }
 
+// GET: Load the first 10 notes.
 async function loadNotes() {
     loadButton.disabled = true;
     showStatus("Loading notes...");
@@ -83,6 +94,69 @@ async function loadNotes() {
     }
 }
 
-loadButton.addEventListener("click", loadNotes);
+// POST: Create a note.
+async function createNote(event) {
+    event.preventDefault();
 
+    const title = titleInput.value.trim();
+    const body = bodyInput.value.trim();
+
+    if (title.length === 0) {
+        showStatus("Please enter a note title.", "error");
+        titleInput.focus();
+        return;
+    }
+
+    if (title.length > 100) {
+        showStatus("The title must not exceed 100 characters.", "error");
+        titleInput.focus();
+        return;
+    }
+
+    if (body.length === 0) {
+        showStatus("Please enter the note details.", "error");
+        bodyInput.focus();
+        return;
+    }
+
+    submitButton.disabled = true;
+    showStatus("Creating note...");
+
+    try {
+        const result = await request(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title,
+                body,
+                userId: 1
+            })
+        });
+
+        const newNote = result.data;
+
+        // JSONPlaceholder simulates creation but does not permanently save posts.
+        notes.unshift(newNote);
+        renderNotes();
+
+        noteForm.reset();
+        showStatus("Note created successfully (practice API).", "success");
+    } catch (error) {
+        showStatus(
+            "Sorry, we couldn't create the note. Please try again.",
+            "error"
+        );
+
+        console.error("Error creating note:", error);
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
+loadButton.addEventListener("click", loadNotes);
+noteForm.addEventListener("submit", createNote);
+
+// Display the initial empty state.
 renderNotes();
